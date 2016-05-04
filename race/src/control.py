@@ -24,8 +24,8 @@ def control(data):
 	# 3. Make sure the error is within bounds
  	#error = data.pid_error * 10
  	#angle = kp * error + kd * (prev_error - error)
- 	prev_error = error
- 	angle = error
+ 	prev_error = data.pid_error
+ 	angle = prev_error
  	if(angle < -100):
  		angle = -100
  	if(angle > 100):

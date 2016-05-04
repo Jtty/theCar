@@ -35,18 +35,20 @@ def doMath(theta, Q, P, R):
 
 
 def callback(data):
-	theta = 50;
+	theta = 50
 	a = getRange(data,theta) #our Hypotenuse
 	b = getRange(data,0) #our straight to the right
+	c = getRange(data,40) #40 degree sample
 	swing = math.radians(theta)
 	realHypotenuse = b/math.cos(swing) #calculated if we were straight
 	#math shit
 	#realDistance = doMath(theta, a, b, realHypotenuse)
 
 
-	print("realDistance: ", realDistance)
+	#print("realDistance: ", realDistance)
 	## Your code goes here
 	print("dist[0]", b)
+	print("dist[40]",c)
 	print("dist[50]", a)
 
 
@@ -57,29 +59,39 @@ def callback(data):
 	alpha = math.atan((a*math.cos(swing)-b)/(a*math.sin(swing)))
 	dist = b*math.cos(alpha)
 	print("distance", dist)
+	function = 482.565 * math.pow(dist,3) - 1013.39 * math.pow(dist,2) + 791.781 * dist - 223.207 
+	shouldTurn  = False
+		
 
-	if(a < realHypotenuse):
+	if(c > a): #change us to turning state
+		shouldTurn = True
+
+	if(shouldTurn):
+		error = 90
+	elif(a < realHypotenuse):
 		#angled towards the wall
+		print("Angled Right")
 		if(dist < desired_trajectory):
 			#too close
+			print("Toooo Close")
 			#turn away from wall (left)
-			error = -217.12 * math.pow(dist, 3) + 455.952 * math.pow(dist, 2) - 406.506 * dist + 135.61
+			error = function
 		else:
 			#far away
 			#go straight
 			error = 0
 	elif(a >= realHypotenuse):
 		#angled away from wall
+		print("Angled Left")
 		if(dist < desired_trajectory):
 			#too close
 			#go straight
 			error = 0
 		else:
 			#far away
+			print("Far Away")
 			#turn toward wall (right)
-			error = -217.12 * math.pow(dist, 3) + 455.952 * math.pow(dist, 2) - 406.506 * dist + 135.61
-
-
+			error = function
 	#error = dist - desired_trajectory
 	
 	## END
@@ -88,7 +100,9 @@ def callback(data):
 	msg.pid_error = error
 	msg.pid_vel = vel
 	pub.publish(msg)
-	
+	# original error func -(-217.12 * math.pow(dist, 3) + 455.952 * math.pow(dist, 2) - 406.506 * dist + 135.61)
+
+
 
 if __name__ == '__main__':
 	print("Laser node started")
