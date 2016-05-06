@@ -9,11 +9,10 @@ desired_trajectory = .7
 vel = 18
 turning = 0
 
-distArray= [.7,.7]
+distArray = [.7,.7,.7]
 spot = 0
 
 pub = rospy.Publisher('error', pid_input, queue_size=10)
-
 ##	Input: 	data: Lidar scan data
 ##			theta: The angle at which the distance is requried
 ##	OUTPUT: distance of scan at angle theta
@@ -27,15 +26,15 @@ def getRange(data,theta):
 
 	return data.ranges[idx]
 
-def addDist(dist):
+def addDist(newDist):
 	global spot
-	distArray[spot]
-	spot = (spot +1) % 2
-def average():
-	avg = distArray[0] + distArray[1]
-	avg /= 2
-	return avg
+	distArray[spot] = newDist
+	spot = (spot + 1) % len(distArray)
 
+def avgDist():
+	avg = distArray[0] + distArray[1] + distArray[2]
+	avg /= len(distArray)
+	return avg
 
 def doMath(theta, Q, P, R):
 	swing = math.radians(theta)
@@ -47,11 +46,13 @@ def doMath(theta, Q, P, R):
 	return math.sin(math.radians(littley)) * P
 
 
+
 def callback(data):
 	theta = 50
 	a = getRange(data,theta) #our Hypotenuse
 	b = getRange(data,0) #our straight to the right
 	c = getRange(data,40) #40 degree sample
+	z = getRange(data,60)
 	swing = math.radians(theta)
 	realHypotenuse = b/math.cos(swing) #calculated if we were straight
 	#math shit
@@ -63,8 +64,7 @@ def callback(data):
 	print("dist[0]", b)
 	print("dist[40]",c)
 	print("dist[50]", a)
-	print("dist[60]",d)
-
+	print("dist[60]", z)
 
 	#error = -217.12 * math.pow(dist, 3) + 455.952 * math.pow(dist, 2) - 406.506 * dist + 135.61
 	
@@ -72,22 +72,29 @@ def callback(data):
 
 	alpha = math.atan((a*math.cos(swing)-b)/(a*math.sin(swing)))
 	dist = b*math.cos(alpha)
+	
 	addDist(dist)
-	avgDist = average()
+	average = avgDist()
+
 	print("distance", dist)
-	function = 482.565 * math.pow(avgDist,3) - 1013.39 * math.pow(avgDist,2) + 791.781 * avgDist - 223.207 
+
+	#function = 64.5136 * average ** 3 + 116.125 * average ** 2 + 185.694 * average - 139.287
+	#old
+	function = 482.565 * average ** 3 - 1013.39 * average ** 2 + 791.781 * average - 223.207
+	#function = 482.565 * math.pow(average,3) - 1013.39 * math.pow(average,2) + (791.781 * average) - 223.207 
 	shouldTurn  = False
 		
-
-	if(c > a and c > d): #change us to turning state
+	
+	if(a > z): #change us to turning state
 		shouldTurn = True
 
 	if(shouldTurn):
+		print("TURN TURN TURN")
 		error = 90
 	elif(a < realHypotenuse):
 		#angled towards the wall
 		print("Angled Right")
-		if(avgDist < desired_trajectory):
+		if(average < desired_trajectory):
 			#too close
 			print("Toooo Close")
 			#turn away from wall (left)
@@ -95,14 +102,14 @@ def callback(data):
 		else:
 			#far away
 			#go straight
-			error = 0
+			error = -.5 * function
 	elif(a >= realHypotenuse):
 		#angled away from wall
 		print("Angled Left")
-		if(avgDist < desired_trajectory):
+		if(average < desired_trajectory):
 			#too close
 			#go straight
-			error = 0
+			error = -.5 * function
 		else:
 			#far away
 			print("Far Away")
